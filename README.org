@@ -1,0 +1,14 @@
+* Summary
+:PROPERTIES:
+:CREATED:  [2017-11-02 Thu 23:21]
+:END:
+
+This is an experiment with closures and trampolines in Emacs Lisp.
+I tried this on "GNU Emacs 25.3.1". 
+
+*Caveat*:
+
+Apparently running =(setq lexical-binding t)= in an org mode block
+does not work. Please experiment in the elisp REPL.
+
+

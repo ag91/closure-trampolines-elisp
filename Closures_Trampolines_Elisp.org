@@ -1,0 +1,120 @@
+# Created 2017-11-02 Thu 23:19
+#+TITLE: Learn about closures and trampolines
+#+AUTHOR: Andrea Giugliano
+
+
+* learn about lexical scope in Elisp
+:PROPERTIES:
+:CREATED:  [2017-11-02 Thu 23:27]
+:END:
+
+
+#+BEGIN_SRC elisp :session lexical-binding :tangle yes
+(setq test (lexical-let ((foo "bar"))
+	     (lambda () 
+	       foo)))
+#+END_SRC
+
+#+RESULTS:
+| lambda | (&rest --cl-rest--) | (apply (quote (lambda (G539) (symbol-value G539))) (quote --foo--) --cl-rest--) |
+
+#+BEGIN_SRC elisp :session lexical-binding :tangle yes
+(funcall test)
+#+END_SRC
+
+#+RESULTS:
+: bar
+
+#+BEGIN_SRC elisp  :session lexical-binding :tangle yes
+(let ((foo "something-else"))
+  (funcall test))
+
+#+END_SRC
+
+#+RESULTS:
+: something-else
+
+
+
+* learn about trampolines
+:PROPERTIES:
+:CREATED:  [2017-11-02 Thu 23:27]
+:END:
+
+
+Based on: http://www.datchley.name/recursion-tail-calls-and-trampolines/
+
+
+Based on: http://www.datchley.name/recursion-tail-calls-and-trampolines/
+
+Elisp does not have optimization for tail recursion. For this issue one
+can use an higher order function to avoid overflowing the stack:
+
+#+BEGIN_SRC elisp :session trampolines :tangle yes
+(defun range (s e &optional res)
+  (let ((res (cons s res)))
+   (if (eql s e)
+      (reverse res)
+      (range (if (< s e) (+ 1 s) (- 1 s)) e res))))
+
+(range 1 4)
+#+END_SRC 
+
+#+RESULTS:
+| 1 | 2 | 3 | 4 |
+
+For big numbers this fails:
+
+#+BEGIN_SRC elisp :session trampolines :tangle yes
+(range 1 31181)
+#+END_SRC
+
+*Important*: the following apply only if lexical binding is enabled
+(we need closures):
+
+#+BEGIN_SRC elisp :session trampolines
+(setq lexical-binding t)
+#+END_SRC
+
+We can introduce the trampoline function:
+
+#+BEGIN_SRC elisp :session trampolines :tangle yes
+(defun trampoline (fn &rest args)
+  (progn
+    (message "%s" fn)
+    (setf v (apply fn args))
+    (while (functionp v)
+      (message "%s" v)
+      (setf v (funcall v)))
+    v))
+#+END_SRC
+
+#+RESULTS:
+: trampoline
+
+Note that we keep applying function calls (that do not accumulate in
+the stack) until we get a non callable value.
+
+We need to modify the range function, as it must return something that
+we can execute singularly instead its recursive call:
+
+#+BEGIN_SRC elisp :session trampolines :tangle yes
+(defun range (s e &optional res)
+  (let ((res (cons s res)))
+    (if (eql s e)
+        (reverse res)
+      (lambda ()
+        (range
+         (if (< s e) (+ 1 s) (- 1 s))
+         e
+         res)))))
+
+(trampoline #'range 1 4)
+#+END_SRC
+
+#+RESULTS:
+| 1 | 2 | 3 | 4 |
+
+
+So we have basically split recursive calls in independent function
+calls (and saved our stack).
