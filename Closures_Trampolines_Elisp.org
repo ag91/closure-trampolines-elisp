@@ -44,9 +44,6 @@
 
 Based on: http://www.datchley.name/recursion-tail-calls-and-trampolines/
 
-
-Based on: http://www.datchley.name/recursion-tail-calls-and-trampolines/
-
 Elisp does not have optimization for tail recursion. For this issue one
 can use an higher order function to avoid overflowing the stack:
 
